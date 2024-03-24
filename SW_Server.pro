@@ -26,8 +26,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         widget.cpp \
-    server.cpp
+    server.cpp \
+    imagedrawer.cpp
 
 HEADERS += \
         widget.h \
-    server.h
+    server.h \
+    imagedrawer.h

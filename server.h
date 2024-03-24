@@ -10,6 +10,8 @@
 #include <QMap>
 #include <QPair>
 #include <QList>
+#include <QLabel>
+#include "imagedrawer.h"
 
 class Server:public QTcpServer
 {
@@ -23,6 +25,7 @@ private:
     int port = 25;
     QVector <QTcpSocket*> Sockets;
     QByteArray Data;
+    quint64 nextBlockSize;
     void SendToClients(QString str);
     void printTE(QString str);
     void printFromClient(QString str);
@@ -42,6 +45,7 @@ protected slots:
 signals:
     void fromServerToTE(QString);
     void serverIsntStarted();
+    void displayImage(QPixmap);
 
 };
 

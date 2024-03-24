@@ -23,7 +23,9 @@ void Server::incomingConnection(qintptr socketDesctiptor)
     printTE(str);
     Data.clear();
     QDataStream out(&Data, QIODevice::WriteOnly);
-    out << str;
+    out << quint64(0) << str;
+    out.device()->seek(0);
+    out << quint64(Data.size() - sizeof(quint64));
     socket->write(Data);
 }
 
@@ -33,9 +35,49 @@ void Server::slotReadyRead()
     QDataStream in(socket);
     if(in.status() == QDataStream::Ok)
     {
-        QString str;
-        in >> str;
-        printFromClient(str);
+
+        for(;;)
+        {
+            if(nextBlockSize == 0)
+            {
+                if(socket->bytesAvailable() < 8)
+                {
+                    break;
+                }
+                in >> nextBlockSize;
+            }
+            if(socket->bytesAvailable() < nextBlockSize)
+            {
+                break;
+            }
+            bool isImage;
+            in >> isImage;
+            qDebug() << isImage;
+
+            if(isImage == false)
+            {
+                QString str;
+                in >> str;
+                nextBlockSize = 0;
+                printFromClient(str);
+                break;
+            }
+            else
+            {
+                QPixmap img;
+                in >> img;
+                ImageDrawer *imgD = new ImageDrawer();
+                imgD->setWindowTitle("Image from client");
+                imgD->setMinimumSize(1, 1);
+                connect(this, &Server::displayImage, imgD, &ImageDrawer::setImage);
+                emit displayImage(img);
+                imgD->show();
+                nextBlockSize = 0;
+                QString confirm = "Image received";
+                printFromClient(confirm);
+                break;
+            }
+        }
     }
     else
     {
@@ -51,7 +93,6 @@ void Server::SendAll(QString str)
         if (Sockets.size() > 0)
         {
             SendToClients(str);
-            printTE(str);
         }
         else
         {
@@ -69,6 +110,12 @@ void Server::SendAll(QString str)
 void Server::stopServer()
 {
     this->close();
+    for(int i = 0; i < Sockets.size(); i++)
+    {
+        Sockets[i]->abort();
+    }
+    Sockets.clear();
+    map.clear();
     QString str = "Server is down";
     printTE(str);
 }
@@ -145,12 +192,23 @@ void Server::slotDisconnected()
 
 void Server::SendToClients(QString str)
 {
-    Data.clear();
-    QDataStream out(&Data, QIODevice::WriteOnly);
-    out << str;
-    for(int i = 0; i < Sockets.size(); i++)
+    if(str.size() != 0)
     {
-        Sockets[i]->write(Data);
+        Data.clear();
+        QDataStream out(&Data, QIODevice::WriteOnly);
+        out << quint64(0) << str;
+        out.device()->seek(0);
+        out << quint64(Data.size() - sizeof(quint64));
+        for(int i = 0; i < Sockets.size(); i++)
+        {
+            Sockets[i]->write(Data);
+        }
+        printTE(str);
+    }
+    else
+    {
+        QString str2 = "Message cannot be empty";
+        printTE(str2);
     }
 }
 
@@ -239,4 +297,5 @@ void Server::startServer(int s_port)
             printTE(str1);
         }
     }
+    nextBlockSize = 0;
 }
