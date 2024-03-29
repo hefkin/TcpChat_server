@@ -13,6 +13,7 @@ void Server::incomingConnection(qintptr socketDesctiptor)
     connect(socket, &QTcpSocket::disconnected, this, &Server::slotDisconnected);
 
     Sockets.push_back(socket);
+    qDebug() << Sockets.size();
     int socketD = socket->socketDescriptor();
     QString ipClient = socket->peerAddress().toString();
     QString portClient = QString::number(socket->peerPort());
@@ -32,6 +33,7 @@ void Server::incomingConnection(qintptr socketDesctiptor)
 void Server::slotReadyRead()
 {
     socket = (QTcpSocket*)sender();
+
     QDataStream in(socket);
     if(in.status() == QDataStream::Ok)
     {
@@ -110,9 +112,11 @@ void Server::SendAll(QString str)
 void Server::stopServer()
 {
     this->close();
-    for(int i = 0; i < Sockets.size(); i++)
+    int size = Sockets.size();
+    for(int i = 0; i < size; i++)
     {
-        Sockets[i]->abort();
+        Sockets[0]->abort();
+        qDebug() << "delete" << i;
     }
     Sockets.clear();
     map.clear();
